@@ -2,8 +2,6 @@ package main
 
 /*
 TODO:
-* Stage 1*
-- Only backup files that match a search filter
 * Stage 2*
 - Build UI for QNAP
 - Integrate with QNAP API
@@ -25,12 +23,20 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+	"flag"
 )
 
 type Config struct {
 	Storage string
 	Filter string
 }
+
+// Command-line flags
+var (
+	directory = flag.String("data", "./", "Path to directory where you want the backup saved.")
+	search = flag.String("filter", "", "A Drive search query used to filter what files you want" +
+		"to backup.")
+)
 
 var  (
 	conf = Config{}
@@ -113,10 +119,10 @@ func download_file(i *drive.File, srv drive.Service) {
 			filename = fmt.Sprintf("%v%v.docx", file_dir, i.Name)
 			download_type = "doc"
 		case "application/vnd.google-apps.drawing":
-			filename = fmt.Sprintf("%v%v.png", file_dir, i.Name)
+			filename = fmt.Sprintf("%v%v.pdf", file_dir, i.Name)
 			download_type = "drawing"
 		case "application/vnd.google-apps.presentation":
-			filename = fmt.Sprintf("%v%v.odp", file_dir, i.Name)
+			filename = fmt.Sprintf("%v%v.pdf", file_dir, i.Name)
 			download_type = "slides"
 		case "application/vnd.google-apps.script":
 			filename = fmt.Sprintf("%v%v.json", file_dir, i.Name)
@@ -154,6 +160,7 @@ func download_file(i *drive.File, srv drive.Service) {
 		resp, err = file_get.Download()
 		if err != nil {
 			log.Printf("Error downloading file: %v", err)
+			return
 		}
 	case "sheet":
 		log.Println("Exporting to MS Excel")
@@ -161,6 +168,7 @@ func download_file(i *drive.File, srv drive.Service) {
 		resp, err = export_call.Download()
 		if err != nil {
 			log.Printf("Was not able to download file: %s\n", err)
+			return
 		}
 	case "doc":
 		log.Println("Exporting to MS Word")
@@ -168,6 +176,7 @@ func download_file(i *drive.File, srv drive.Service) {
 		resp, err = export_call.Download()
 		if err != nil {
 			log.Printf("Was not able to download file: %s\n", err)
+			return
 		}
 	case "drawing":
 		log.Println("Exporting to PDF")
@@ -175,6 +184,7 @@ func download_file(i *drive.File, srv drive.Service) {
 		resp, err = export_call.Download()
 		if err != nil {
 			log.Printf("Was not able to download file: %s\n", err)
+			return
 		}
 	case "slides":
 		log.Println("Exporting to PDF")
@@ -182,6 +192,7 @@ func download_file(i *drive.File, srv drive.Service) {
 		resp, err = export_call.Download()
 		if err != nil {
 			log.Printf("Was not able to download file: %s\n", err)
+			return
 		}
 	case "script":
 		log.Println("Exporting to JSON")
@@ -189,6 +200,7 @@ func download_file(i *drive.File, srv drive.Service) {
 		resp, err = export_call.Download()
 		if err != nil {
 			log.Printf("Was not able to download file: %s\n", err)
+			return
 		}
 	default:
 		log.Fatalf("No corresponding media type: %s", download_type)
@@ -202,15 +214,20 @@ func download_file(i *drive.File, srv drive.Service) {
 func run_backup(srv drive.Service) {
 	pageToken := ""
 	for {
-		r, err := srv.Files.List().PageToken(pageToken).PageSize(50).
-			Fields("nextPageToken, files(id, name, mimeType, size, originalFilename, parents, modifiedTime)").Do()
+		var r *drive.FileList
+		list_call := srv.Files.List().PageToken(pageToken).PageSize(50).
+			Fields("nextPageToken, files(id, name, mimeType, size, originalFilename, parents, modifiedTime)")
+		if conf.Filter == "" {
+			r, err = list_call.Do()
+		} else {
+			r, err = list_call.Q(conf.Filter).Do()
+		}
 		if err != nil {
 			log.Fatalf("Unable to list files: %v", err)
 		}
 
 		if len(r.Files) > 0 {
 			for _, i := range r.Files {
-				//fmt.Printf("%s (%s)\n", i.Name, i.Id)
 				download_file(i, srv)
 			}
 		} else {
@@ -290,9 +307,9 @@ func tokenCacheFile() (string, error) {
 func main() {
 	ctx := context.Background()
 
-	// Define manually for now
-	conf.Storage = "./data"
-	conf.Filter = ""
+	flag.Parse()
+	conf.Storage = *directory
+	conf.Filter = *search
 
 	b, err := ioutil.ReadFile("client_id.json")
 	if err != nil {
