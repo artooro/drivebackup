@@ -21,3 +21,29 @@ on a really flexible search query system.
 
 See https://developers.google.com/drive/v3/web/search-parameters#examples
 for further examples of using --filter
+
+## Installation on a QNAP
+
+Copy the drivebackup binary to your QNAP using SSH.
+
+`scp drivebackup admin@192.168.0.2:`
+
+_Replace admin@192.168.0.2 with the actual username and IP address_
+
+Run manually once to authenticate.
+
+`./drivebackup --configure`
+
+Create cron job
+
+`echo '30 3 * * 0 /root/drivebackup --data /share/MD0_DATA/mybackupshare --filter "'1B8dgVVPsv2wOeE2pX19kNU91bTg' in parents"' >> /etc/config/crontab`
+
+Restart the cron daemon
+
+`crontab /etc/config/crontab && /etc/init.d/crond.sh restart`
+
+__Be sure to change the command to include your own options__
+
+The above example will run at 03:30 every Sunday and backup everything from the
+Google Drive folder with an ID of 1B8dgVVPsv2wOeE2pX19kNU91bTg to the QNAP share
+called mybackupshare that is stored on the MD0_DATA volume.

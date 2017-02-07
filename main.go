@@ -35,7 +35,8 @@ type Config struct {
 var (
 	directory = flag.String("data", "./", "Path to directory where you want the backup saved.")
 	search = flag.String("filter", "", "A Drive search query used to filter what files you want" +
-		"to backup.")
+		" to backup.")
+	configure = flag.Bool("configure", false, "Configure authentication tokens.")
 )
 
 var  (
@@ -311,10 +312,7 @@ func main() {
 	conf.Storage = *directory
 	conf.Filter = *search
 
-	b, err := ioutil.ReadFile("client_id.json")
-	if err != nil {
-		log.Fatalf("Unable to read client id file: %v", err)
-	}
+	b := []byte("{\"installed\":{\"client_id\":\"509615771323-pntgak8thbl9ia0sd3gtb0t31utkkn6m.apps.googleusercontent.com\",\"project_id\":\"drive-backup-156821\",\"auth_uri\":\"https://accounts.google.com/o/oauth2/auth\",\"token_uri\":\"https://accounts.google.com/o/oauth2/token\",\"auth_provider_x509_cert_url\":\"https://www.googleapis.com/oauth2/v1/certs\",\"client_secret\":\"LvoP9X8RAZC3J6adRN3o-Xvb\",\"redirect_uris\":[\"urn:ietf:wg:oauth:2.0:oob\",\"http://localhost\"]}}")
 
 	// Read-only scope is critical to prevent any changes/mistakes to the production Drive
 	// We don't care about restore. User would manually restore files from the backup
@@ -330,5 +328,9 @@ func main() {
 		log.Fatalf("Unable to get Drive client: %v", err)
 	}
 
-	run_backup(*srv)
+	if !*configure {
+		run_backup(*srv)
+	} else {
+		fmt.Println("Configuration complete!")
+	}
 }
