@@ -36,7 +36,7 @@ Run manually once to authenticate.
 
 Create cron job
 
-`echo '30 3 * * 0 /root/drivebackup --data /share/MD0_DATA/mybackupshare --filter "'1B8dgVVPsv2wOeE2pX19kNU91bTg' in parents"' >> /etc/config/crontab`
+`echo '30 3 * * 0 /root/drivebackup --data /share/MD0_DATA/mybackupshare --filter "'\''1B8dgVVPsv2wOeE2pX19kNU91bTg'\'' in parents"' >> /etc/config/crontab`
 
 Restart the cron daemon
 
